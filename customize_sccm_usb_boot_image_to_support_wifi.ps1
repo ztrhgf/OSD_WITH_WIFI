@@ -66,15 +66,20 @@ Mount-WindowsImage -ImagePath $imagePath -Path $mountPath -Index 1
 
 #region customize winpeshl.ini (to initialize Wi-Fi ASAP)
 $winpeshl = "$mountPath\Windows\System32\winpeshl.ini"
-$newContent = @"
+$currentContent = Get-Content $winpeshl
+if (!($currentContent -match "Start-WinREWiFi")) {
+    # not yet modified
+
+    $newContent = @"
 [LaunchApps]
 Wpeinit.exe
 PowerShell.exe, -NoL -C Start-WinREWiFi
 "@
-# add original commands
-#TODO neresi druhe spusteni tzn prikazy uz jsou upravene
-Get-Content $winpeshl | ? { $_ -ne "[LaunchApps]" } | % { $newContent += "`r`n$_`r`n" }
-$newContent | Out-File $winpeshl -Force
+
+    # add original commands
+    $currentContent | ? { $_ -ne "[LaunchApps]" } | % { $newContent += "`r`n$_`r`n" }
+    $newContent | Out-File $winpeshl -Force
+}
 #endregion customize winpeshl.ini (to initialize Wi-Fi ASAP)
 
 #region customize Set-WinREWiFi (to omit removal of Wi-Fi xml profile)
@@ -95,7 +100,7 @@ Set-Content -Path $WinREWiFi -Value (Get-Content $WinREWiFi | % {
 $startnet = "$mountPath\Windows\System32\startnet.cmd"
 Set-Content -Path $startnet -Value (Get-Content $startnet | % {
         # comment the line
-        "::$_"
+        ":: $_"
     })
 #endregion customize startnet.cmd (to omit OSDCloud builtin attempt to initialize Wi-Fi)
 
