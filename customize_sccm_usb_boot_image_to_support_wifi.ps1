@@ -1,5 +1,14 @@
 #Requires -RunAsAdministrator
 
+<#
+
+script for customization of boot.wim file placed on USB flash drive
+to support Wi-Fi in SCCM OSD Task Sequence
+
+boot.wim has to be created using OSDCloud module with explicit Wi-Fi support enabled
+
+#>
+
 param (
     [Parameter(Mandatory = $true)]
     [ValidateScript( {
