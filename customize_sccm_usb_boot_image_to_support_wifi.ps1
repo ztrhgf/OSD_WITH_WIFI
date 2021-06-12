@@ -7,6 +7,15 @@
 
     boot.wim has to be created using OSDCloud module with explicit Wi-Fi support enabled (check NOTES)!
 
+    What it does:
+    - mount given/searched boot.wim
+    - create helper connectWifi.ps1 script
+    - create Wi-Fi xml profile for making unattend connection 
+    - customize winpeshl.ini (to initialize Wi-Fi ASAP)
+    - customize OSDCLoud function Set-WinREWiFi (to omit removal of Wi-Fi xml profile)
+    - customize startnet.cmd (to omit OSDCloud builtin attempt to initialize Wi-Fi)
+    - save & dismount boot.wim
+
     .PARAMETER wimMountPath
     Optional parameter.
     Path to empty folder, where boot.wim should be mounted.
@@ -259,11 +268,11 @@ if ($wifiProfile -and (Test-Path $wifiProfile)) {
         Start-WinREWiFi
     } else {
         # establishing connection takes time
-        $i = 0
-        while (!(test-connection "google.com" -Count 1 -Quiet) -and $i -le 60) {
-            "waiting for internet connection"
+        $i = 60
+        while (!(test-connection "google.com" -Count 1 -Quiet) -and $i -gt 1) {
+            "waiting for internet connection ($i)"
             sleep 1
-            ++$i
+            --$i
         }
     }
 } else {
@@ -276,10 +285,10 @@ if ($wifiProfile -and (Test-Path $wifiProfile)) {
     Set-Content -Value $connectWifiContent -Path $connectWifi -Force
     #endregion create connectWifi script
 
-    #region create Wi-Fi profile for auto-connection
+    #region create Wi-Fi xml profile for making unattend connection
     $wifiProfile = "$wimMountPath\Windows\Temp\wprofile.xml"
     if ($wifiCredential) {
-        # TEMP is automatically searched by custom TASK SEQUENCE step, that copies xml profile to installed OS for Wi-Fi persistence
+        # TEMP is automatically searched by custom TASK SEQUENCE 'COPY Wi-Fi PROFILE TO OS DISK' step, that copies xml profile to installed OS for Wi-Fi persistence
 
         $SSID = $wifiCredential.UserName
         "- Generating Wi-Fi profile for '$SSID' (auth: WPA2PSK, enc: AES) and saving it at '$wifiProfile'"
@@ -328,7 +337,7 @@ if ($wifiProfile -and (Test-Path $wifiProfile)) {
         }
 
     }
-    #endregion create Wi-Fi profile for auto-connection
+    #endregion create Wi-Fi xml profile for making unattend connection
         
     #region customize winpeshl.ini (to initialize Wi-Fi ASAP)
     $winpeshl = "$wimMountPath\Windows\System32\winpeshl.ini"
@@ -349,10 +358,10 @@ PowerShell.exe, -NoProfile -NoLogo -ExecutionPolicy Bypass -File connectWifi.ps1
     }
     #endregion customize winpeshl.ini (to initialize Wi-Fi ASAP)
 
-    #region customize Set-WinREWiFi (to omit removal of Wi-Fi xml profile)
+    #region customize OSDCLoud function Set-WinREWiFi (to omit removal of Wi-Fi xml profile)
     $WinREWiFi = Get-Item "$wimMountPath\Program Files\WindowsPowerShell\Modules\OSD\*\Public\WinREWiFi.ps1" | Select-Object -ExpandProperty FullName
     $replacedLine = 0
-    "- Customizing Set-WinREWiFi function saved in '$WinREWiFi' (to omit removal of Wi-Fi xml profile)"
+    "- Customizing Set-WinREWiFi function defined in '$WinREWiFi' (to omit removal of Wi-Fi xml profile)"
     Set-Content -Path $WinREWiFi -Value (Get-Content $WinREWiFi | % {
             if ($_ -match '^\s*Remove-Item \$WlanConfig -ErrorAction SilentlyContinue') {
                 # comment the line
@@ -384,7 +393,7 @@ PowerShell.exe, -NoProfile -NoLogo -ExecutionPolicy Bypass -File connectWifi.ps1
             break
         }
     }
-    #endregion customize Set-WinREWiFi (to omit removal of Wi-Fi xml profile)
+    #endregion customize OSDCLoud function Set-WinREWiFi (to omit removal of Wi-Fi xml profile)
 
     #region customize startnet.cmd (to omit OSDCloud builtin attempt to initialize Wi-Fi)
     $startnet = "$wimMountPath\Windows\System32\startnet.cmd"
