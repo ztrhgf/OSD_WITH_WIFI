@@ -361,20 +361,26 @@ PowerShell.exe, -NoProfile -NoLogo -ExecutionPolicy Bypass -File connectWifi.ps1
     #region customize OSDCLoud function Set-WinREWiFi (to omit removal of Wi-Fi xml profile)
     $WinREWiFi = Get-Item "$wimMountPath\Program Files\WindowsPowerShell\Modules\OSD\*\Public\WinREWiFi.ps1" | Select-Object -ExpandProperty FullName
     $replacedLine = 0
+    $lineRegex = '\s*Remove-Item \$WlanConfig -ErrorAction SilentlyContinue'
     "- Customizing Set-WinREWiFi function defined in '$WinREWiFi' (to omit removal of Wi-Fi xml profile)"
     Set-Content -Path $WinREWiFi -Value (Get-Content $WinREWiFi | % {
-            if ($_ -match '^\s*Remove-Item \$WlanConfig -ErrorAction SilentlyContinue') {
+            if ($_ -match "^$lineRegex") {
                 # comment the line
                 "# commented so I can use it to make Wi-Fi connection persistent, via importing it again after the restart to installed OS"
                 "# $_"
                 ++$replacedLine
+            } elseif ($_ -match "^#$lineRegex") {
+                # already commented
+                ++$replacedLine
+                # leave it as it is
+                $_
             } else {
                 # leave it as it is
                 $_
             }
         })
     if (!$replacedLine) {
-        Write-Warning "No modification was made! Its commented already or function content was changed. Check manually."
+        Write-Warning "No modification to the function Set-WinREWiFi was made! Its content was probably changed. Check manually."
         $choice = ""
         while ($choice -notmatch "^[Y|N]$") {
             $choice = Read-Host "Continue? (Y|N)"
