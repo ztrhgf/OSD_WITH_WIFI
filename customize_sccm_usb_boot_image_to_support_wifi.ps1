@@ -38,6 +38,10 @@
      - has to be exported with plaintext password!
       - netsh wlan export profile name=`"MyWifiSSID`" key=clear folder=C:\Wifi
     
+    .PARAMETER pauseBeforeUnmount
+    Switch for pausing the customization process before unmounting the boot.wim.
+    So you can easily make another modifications of your choice.
+
     .EXAMPLE
     customize_sccm_usb_boot_image_to_support_wifi.ps1
 
@@ -119,7 +123,9 @@ param (
                 throw "$_ isn't valid Wi-Fi XML profile. Password is not in plaintext. Use command like this, to create it: netsh wlan export profile name=`"MyWifiSSID`" key=clear folder=C:\Wifi"
             }
         })]
-    [string] $xmlWiFiProfile
+    [string] $xmlWiFiProfile,
+
+    [switch] $pauseBeforeUnmount
 )
 
 $ErrorActionPreference = "Stop"
@@ -230,49 +236,52 @@ wpeinit.exe
 if ($wifiProfile -and (Test-Path $wifiProfile)) {
     # use existing wifi profile for connection
 
-    # 1. option (use when pull request will be accepted)
-    # Start-WinREWiFi -wifiProfile $wifiProfile
+    try {
+        Start-WinREWiFi -wifiProfile $wifiProfile -ErrorAction Stop
+    } catch {
+        # probably used old version of the OSDCloud module
+        # simulating functionality of the Start-WinREWiFi
 
-    # 2. option
-    if (Test-WebConnection -Uri 'google.com') {
-        "You are already connected to the Internet"
-        return
-    }
-
-    # get SSID
-    $SSID = ([xml](Get-Content $wifiProfile)).WLANProfile.Name
-
-    "Wi-Fi profile '$wifiProfile' will be used to connect to $SSID"
-
-    # start wifi service
-    if (Get-Service -Name WlanSvc) {
-        if ((Get-Service -Name WlanSvc).Status -ne 'Running') {
-            "Starting WlanSvc service"
-            Get-Service -Name WlanSvc | Start-Service
-            Start-Sleep -Seconds 10
+        if (Test-WebConnection -Uri 'google.com') {
+            "You are already connected to the Internet"
+            return
         }
-    }
 
-    # just for sure
-    $null = netsh wlan delete profile "$SSID"
+        # get SSID
+        $SSID = ([xml](Get-Content $wifiProfile)).WLANProfile.Name
 
-    # import wifi profile
-    $null = netsh wlan add profile filename="$wifiProfile"
+        "Wi-Fi profile '$wifiProfile' will be used to connect to $SSID"
 
-    # connect to SSID
-    $result = netsh wlan connect name="$SSID" ssid="$SSID"
+        # start wifi service
+        if (Get-Service -Name WlanSvc) {
+            if ((Get-Service -Name WlanSvc).Status -ne 'Running') {
+                "Starting WlanSvc service"
+                Get-Service -Name WlanSvc | Start-Service
+                Start-Sleep -Seconds 10
+            }
+        }
 
-    if ($result -ne "Connection request was completed successfully.") {
-        Write-Warning "Connection to WIFI wasn't successful. Error was $result"
-        # use OSDCloud function for making initial connection
-        Start-WinREWiFi
-    } else {
-        # establishing connection takes time
-        $i = 60
-        while (!(test-connection "google.com" -Count 1 -Quiet) -and $i -gt 1) {
-            "waiting for internet connection ($i)"
-            sleep 1
-            --$i
+        # just for sure
+        $null = netsh wlan delete profile "$SSID"
+
+        # import wifi profile
+        $null = netsh wlan add profile filename="$wifiProfile"
+
+        # connect to SSID
+        $result = netsh wlan connect name="$SSID" ssid="$SSID"
+
+        if ($result -ne "Connection request was completed successfully.") {
+            Write-Warning "Connection to WIFI wasn't successful. Error was $result"
+            # use OSDCloud function for making initial connection
+            Start-WinREWiFi
+        } else {
+            # establishing connection takes time
+            $i = 60
+            while (!(test-connection "google.com" -Count 1 -Quiet) -and $i -gt 1) {
+                "waiting for internet connection ($i)"
+                sleep 1
+                --$i
+            }
         }
     }
 } else {
@@ -409,6 +418,16 @@ PowerShell.exe, -NoProfile -NoLogo -ExecutionPolicy Bypass -File connectWifi.ps1
             ":: $_"
         })
     #endregion customize startnet.cmd (to omit OSDCloud builtin attempt to initialize Wi-Fi)
+
+    #region pause 
+    if ($pauseBeforeUnmount) {
+        Write-Warning "PAUSED"
+        $choice = ""
+        while ($choice -notmatch "^Y$") {
+                $choice = Read-Host "Continue? (Y)"
+        }
+    }
+    #endregion pause 
 
     #region dismount SCCM boot.wim
     "- Saving and dismounting '$imagePath' from '$wimMountPath'"
