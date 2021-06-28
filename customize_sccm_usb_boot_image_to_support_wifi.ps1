@@ -215,6 +215,12 @@ $Host.UI.RawUI.Windowtitle = "Making connection to Wi-Fi"
 
 Start-Transcript "$env:TEMP\wreconnect.log"
 
+# in case installation is running on ethernet cable i.e. is already connected to the internet
+if (Test-WebConnection -Uri 'google.com') {
+    "You are already connected to the Internet"
+    return
+}
+
 $OSDrive = Get-Volume | ? { $_.FileSystemLabel -eq "Windows" } | select -exp DriveLetter | % {"$_`:"}
 # location where the wifi profile should be stored
 # start searching on installed OS, then WinPE
@@ -234,12 +240,12 @@ $WCFG | % {
 wpeinit.exe
 
 if ($wifiProfile -and (Test-Path $wifiProfile)) {
-    # use existing wifi profile for connection
+    "Using existing wifi profile for making connection"
 
     try {
         Start-WinREWiFi -wifiProfile $wifiProfile -ErrorAction Stop
     } catch {
-        # probably used old version of the OSDCloud module
+        # probably used old version of the OSDCloud module without support for wifiProfile parameter
         # simulating functionality of the Start-WinREWiFi
 
         if (Test-WebConnection -Uri 'google.com') {
@@ -285,8 +291,10 @@ if ($wifiProfile -and (Test-Path $wifiProfile)) {
         }
     }
 } else {
-    # there is not wifi profile to use
+    # there isn't any wifi profile to use
     # use OSDCloud function for making initial connection
+
+    "No Wi-Fi profile was found, making initial connection" 
 
     Start-WinREWiFi
 }
@@ -357,7 +365,7 @@ if ($wifiProfile -and (Test-Path $wifiProfile)) {
 
         $newContent = @"
 [LaunchApps]
-PowerShell.exe, -NoProfile -NoLogo -ExecutionPolicy Bypass -File connectWifi.ps1
+PowerShell.exe, -NoProfile -NoLogo -ExecutionPolicy Bypass -File %WINDIR%\System32\connectWifi.ps1
 "@
 
         # add former commands
