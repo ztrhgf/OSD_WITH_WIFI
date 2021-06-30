@@ -215,9 +215,15 @@ $Host.UI.RawUI.Windowtitle = "Making connection to Wi-Fi"
 
 Start-Transcript "$env:TEMP\wreconnect.log"
 
-# in case installation is running on ethernet cable i.e. is already connected to the internet
-if (Test-WebConnection -Uri 'google.com') {
-    "You are already connected to the Internet"
+# installs Plug and Play devices, processes Unattend.xml settings, and loads network resources
+wpeinit.exe
+
+# wait to ensure, adapters and wmi will be ready for quering
+Start-Sleep 10
+
+# stop in case installation is running on ethernet cable
+if (Get-WmiObject -Class win32_networkadapter -filter "AdapterType = 'Ethernet 802.3' and NetConnectionStatus = 2") {
+    "You are connected using cable. Wifi won't be used."
     return
 }
 
@@ -235,9 +241,6 @@ $WCFG | % {
         $wifiProfile = ""
     }
 }
-
-# installs Plug and Play devices, processes Unattend.xml settings, and loads network resources
-wpeinit.exe
 
 if ($wifiProfile -and (Test-Path $wifiProfile)) {
     "Using existing wifi profile for making connection"
