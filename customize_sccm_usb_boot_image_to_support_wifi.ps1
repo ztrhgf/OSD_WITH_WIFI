@@ -10,7 +10,7 @@
     What it does:
     - mount given/searched boot.wim
     - create helper connectWifi.ps1 script
-    - create Wi-Fi xml profile for making unattend connection 
+    - (optional) create Wi-Fi xml profile for making unattend connection 
     - customize winpeshl.ini (to initialize Wi-Fi ASAP)
     - customize OSDCLoud function Set-WinREWiFi (to omit removal of Wi-Fi xml profile)
     - customize startnet.cmd (to omit OSDCloud builtin attempt to initialize Wi-Fi)
