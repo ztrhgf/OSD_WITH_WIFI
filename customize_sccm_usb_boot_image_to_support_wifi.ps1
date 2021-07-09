@@ -233,16 +233,18 @@ $OSDrive = Get-Volume | ? { $_.FileSystemLabel -eq "Windows" } | select -exp Dri
 $WCFG = "$OSDrive\Windows\WCFG", "X:\Windows\Temp"
 
 # search for wifi xml profile
-$WCFG | % {
-    $wifiProfile = "$_\wprofile.xml"
+$wifiProfile = ''
+foreach ($folder in $WCFG) {
+    $wifiProfile = "$folder\wprofile.xml"
+
     if (Test-Path $wifiProfile) {
-        return
+        break
     } else {
         $wifiProfile = ""
     }
 }
 
-if ($wifiProfile -and (Test-Path $wifiProfile)) {
+if ($wifiProfile) {
     "Using existing wifi profile for making connection"
 
     try {
