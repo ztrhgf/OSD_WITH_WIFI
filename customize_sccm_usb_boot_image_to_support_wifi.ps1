@@ -10,7 +10,7 @@
     What it does:
     - mount given/searched boot.wim
     - create helper connectWifi.ps1 script
-    - (optional) create Wi-Fi xml profile for making unattend connection 
+    - (optional) create Wi-Fi xml profile for making unattend connection
     - customize winpeshl.ini (to initialize Wi-Fi ASAP)
     - customize OSDCLoud function Set-WinREWiFi (to omit removal of Wi-Fi xml profile)
     - customize startnet.cmd (to omit OSDCloud builtin attempt to initialize Wi-Fi)
@@ -37,7 +37,7 @@
     Path to exported Wi-Fi XML profile, that should be used for automatic Wi-Fi connection.
      - has to be exported with plaintext password!
       - netsh wlan export profile name=`"MyWifiSSID`" key=clear folder=C:\Wifi
-    
+
     .PARAMETER pauseBeforeUnmount
     Switch for pausing the customization process before unmounting the boot.wim.
     So you can easily make another modifications of your choice.
@@ -45,19 +45,19 @@
     .EXAMPLE
     customize_sccm_usb_boot_image_to_support_wifi.ps1
 
-    Search for boot.wim on connected USB drives, mount and customize it, to support interactive Wi-Fi connection. 
+    Search for boot.wim on connected USB drives, mount and customize it, to support interactive Wi-Fi connection.
 
     .EXAMPLE
     customize_sccm_usb_boot_image_to_support_wifi.ps1 -wimMountPath C:\temp\boot -wifiCredential (Get-Credential)
 
-    Search for boot.wim on connected USB drives, mount and customize it, to support unattended Wi-Fi connection. 
-    Entered SSID and password will be stored as XML wifi profile in boot.wim and automatically used to make connection. 
+    Search for boot.wim on connected USB drives, mount and customize it, to support unattended Wi-Fi connection.
+    Entered SSID and password will be stored as XML wifi profile in boot.wim and automatically used to make connection.
 
     .EXAMPLE
     customize_sccm_usb_boot_image_to_support_wifi.ps1 -imagePath E:\Sources\boot.wim -wimMountPath C:\temp\boot -xmlWiFiProfile C:\temp\mywifi.xml
 
-    Mount given boot.wim and customize it, to support unattended Wi-Fi connection. 
-    Given wifi XML profile will be stored in boot.wim and automatically used to make connection. 
+    Mount given boot.wim and customize it, to support unattended Wi-Fi connection.
+    Given wifi XML profile will be stored in boot.wim and automatically used to make connection.
 
     .NOTES
     How to create Wi-Fi enabled boot.wim:
@@ -174,10 +174,10 @@ try {
 
             if ($USBImagePath.count -eq 1) {
                 " - $imagePath will be used"
-                
+
                 $choice = ""
                 while ($choice -notmatch "^[Y|N]$") {
-                        $choice = Read-Host "Continue? (Y|N)"
+                    $choice = Read-Host "Continue? (Y|N)"
                 }
                 if ($choice -eq "N") {
                     break
@@ -204,7 +204,7 @@ try {
     # helper PowerShell script, that will be used to making conection to Wi-Fi
     # will be called from winpeshl.ini
     # if there is in boot.wim stored Wi-Fi XML profile Windows\Temp\wprofile.xml, it will be automatically used for connection
-    # otherwise, user will be prompted to choose the Wi-Fi to connect to 
+    # otherwise, user will be prompted to choose the Wi-Fi to connect to
 
     $connectWifi = "$wimMountPath\Windows\System32\connectWifi.ps1"
 
@@ -288,7 +288,7 @@ if ($wifiProfile) {
         } else {
             # establishing connection takes time
             $i = 60
-            while (!(test-connection "google.com" -Count 1 -Quiet) -and $i -gt 1) {
+            while (!(Test-WebConnection -Uri 'google.com') -and $i -gt 1) {
                 "waiting for internet connection ($i)"
                 sleep 1
                 --$i
@@ -299,11 +299,11 @@ if ($wifiProfile) {
     # there isn't any wifi profile to use
     # use OSDCloud function for making initial connection
 
-    "No Wi-Fi profile was found, making initial connection" 
+    "No Wi-Fi profile was found, making initial connection"
 
     Start-WinREWiFi
 }
-'@ 
+'@
     Set-Content -Value $connectWifiContent -Path $connectWifi -Force
     #endregion create connectWifi script
 
@@ -315,7 +315,7 @@ if ($wifiProfile) {
         $SSID = $wifiCredential.UserName
         "- Generating Wi-Fi profile for '$SSID' (auth: WPA2PSK, enc: AES) and saving it at '$wifiProfile'"
         Write-Warning "Wi-Fi password will be stored in plaintext!"
-        $SSIDHex = ($SSID.ToCharArray() | Foreach-Object { '{0:X}' -f ([int]$_) }) -join ''
+        $SSIDHex = ($SSID.ToCharArray() | ForEach-Object { '{0:X}' -f ([int]$_) }) -join ''
         $wPassword = $wifiCredential.GetNetworkCredential().Password
         $wifiProfileXml = @"
 <?xml version="1.0"?>
@@ -343,7 +343,7 @@ if ($wifiProfile) {
             </sharedKey>
         </security>
     </MSM>
-</WLANProfile>        
+</WLANProfile>
 "@
 
         Set-Content -Value $wifiProfileXml -Path $wifiProfile -Force
@@ -360,7 +360,7 @@ if ($wifiProfile) {
 
     }
     #endregion create Wi-Fi xml profile for making unattend connection
-        
+
     #region customize winpeshl.ini (to initialize Wi-Fi ASAP)
     $winpeshl = "$wimMountPath\Windows\System32\winpeshl.ini"
     "- Customizing '$winpeshl' (to initialize Wi-Fi ASAP)"
@@ -432,15 +432,15 @@ PowerShell.exe, -NoProfile -NoLogo -ExecutionPolicy Bypass -File %WINDIR%\System
         })
     #endregion customize startnet.cmd (to omit OSDCloud builtin attempt to initialize Wi-Fi)
 
-    #region pause 
+    #region pause
     if ($pauseBeforeUnmount) {
         Write-Warning "PAUSED"
         $choice = ""
         while ($choice -notmatch "^Y$") {
-                $choice = Read-Host "Continue? (Y)"
+            $choice = Read-Host "Continue? (Y)"
         }
     }
-    #endregion pause 
+    #endregion pause
 
     #region dismount SCCM boot.wim
     "- Saving and dismounting '$imagePath' from '$wimMountPath'"
