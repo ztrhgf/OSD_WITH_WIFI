@@ -381,7 +381,7 @@ PowerShell.exe, -NoProfile -NoLogo -ExecutionPolicy Bypass -File %WINDIR%\System
     #endregion customize winpeshl.ini (to initialize Wi-Fi ASAP)
 
     #region customize OSDCLoud function Set-WinREWiFi (to omit removal of Wi-Fi xml profile)
-    $WinREWiFi = Get-Item "$wimMountPath\Program Files\WindowsPowerShell\Modules\OSD\*\Public\WinREWiFi.ps1" | Select-Object -ExpandProperty FullName
+    $WinREWiFi = Get-Item "$wimMountPath\Program Files\WindowsPowerShell\Modules\OSD\*\Public\WinPE\Set-WinREWiFi.ps1" | Select-Object -ExpandProperty FullName
     $replacedLine = 0
     $lineRegex = '\s*Remove-Item \$WlanConfig -ErrorAction SilentlyContinue'
     "- Customizing Set-WinREWiFi function defined in '$WinREWiFi' (to omit removal of Wi-Fi xml profile)"
